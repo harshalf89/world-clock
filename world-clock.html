@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Horologium — World Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c1015;
+    --bg-elev: #131820;
+    --bg-card: #161c25;
+    --ink: #ecdfc8;
+    --ink-soft: #b5a98e;
+    --ink-mute: #6b7280;
+    --gold: #c9a961;
+    --gold-soft: #8a7341;
+    --gold-glow: rgba(201, 169, 97, 0.15);
+    --rule: rgba(201, 169, 97, 0.22);
+    --rule-soft: rgba(236, 223, 200, 0.08);
+    --red: #b34c4c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body {
+    background:
+      radial-gradient(ellipse at top, rgba(201, 169, 97, 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(45, 60, 80, 0.15) 0%, transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+    padding: 22px 32px 40px;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.7  0 0 0 0.04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 22px;
+  }
+
+  .brand .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand .eyebrow::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--gold);
+  }
+
+  .brand h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: clamp(26px, 3vw, 34px);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .brand h1 .ital {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--gold);
+  }
+
+  .header-meta {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    line-height: 1.6;
+  }
+
+  .header-meta .live-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    margin-right: 8px;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── IST Hero ───────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(180deg, var(--bg-elev) 0%, rgba(19, 24, 32, 0.6) 100%);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 20px 32px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 36px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .analog {
+    width: 160px;
+    height: 160px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .analog svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.4));
+  }
+
+  .digital-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .digital-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .digital-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  .city-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: 0.02em;
+  }
+
+  .city-name .ital {
+    font-style: italic;
+    color: var(--ink-soft);
+    font-size: 16px;
+  }
+
+  .digital-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 300;
+    font-size: clamp(36px, 4.5vw, 54px);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .digital-time .seconds {
+    font-size: 0.4em;
+    color: var(--gold);
+    font-weight: 400;
+  }
+
+  .digital-time .ampm {
+    font-size: 0.28em;
+    color: var(--ink-soft);
+    letter-spacing: 0.2em;
+    margin-left: 10px;
+    font-weight: 400;
+  }
+
+  .digital-meta {
+    display: flex;
+    gap: 24px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+
+  .digital-meta .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .digital-meta .meta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .digital-meta .meta-value {
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 400;
+  }
+
+  /* ── Section title ─────────────────────────────────── */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+
+  .section-title .roman {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+  }
+
+  .section-title h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink);
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule-soft);
+  }
+
+  /* ── Grid of cards ─────────────────────────────────── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--rule-soft);
+    border-radius: 2px;
+    padding: 16px 18px 14px;
+    position: relative;
+    transition: border-color 0.4s ease, transform 0.4s ease;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 28px;
+    height: 1px;
+    background: var(--gold);
+    transition: width 0.5s ease;
+  }
+
+  .card:hover {
+    border-color: var(--rule);
+    transform: translateY(-2px);
+  }
+
+  .card:hover::before {
+    width: 100%;
+  }
+
+  .card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .card-city {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-size: 18px;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+
+  .card-region {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-top: 4px;
+  }
+
+  .card-zone {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    border: 1px solid var(--rule);
+    padding: 2px 7px;
+    border-radius: 1px;
+  }
+
+  .card-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 300;
+    font-size: 30px;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: baseline;
+  }
+
+  .card-time .sec {
+    font-size: 14px;
+    color: var(--gold);
+    margin-left: 5px;
+    font-weight: 400;
+  }
+
+  .card-time .ap {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-left: 7px;
+    letter-spacing: 0.16em;
+    font-weight: 400;
+  }
+
+  .card-date {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .daylight {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .daylight .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ink-mute);
+  }
+
+  .daylight.day .dot { background: #f5c562; box-shadow: 0 0 6px rgba(245, 197, 98, 0.5); }
+  .daylight.night .dot { background: #6e8caa; }
+  .daylight.day { color: #c8a35a; }
+  .daylight.night { color: #7a8aa0; }
+
+  .zoho-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--red);
+    opacity: 0.7;
+    border-left: 1px solid var(--red);
+    padding-left: 7px;
+    line-height: 1.2;
+  }
+
+  .zoho-badge .sub {
+    color: var(--ink-mute);
+    letter-spacing: 0.18em;
+    font-size: 7px;
+    margin-top: 2px;
+  }
+
+  /* ── Translator (collapsible) ──────────────────────── */
+  .translator {
+    margin-top: 28px;
+    background: var(--bg-elev);
+    border: 1px solid var(--rule-soft);
+    border-radius: 2px;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+  }
+
+  .translator.open {
+    border-color: var(--rule);
+  }
+
+  .translator-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    border: none;
+    width: 100%;
+    color: var(--ink);
+    transition: background 0.3s ease;
+  }
+
+  .translator-toggle:hover {
+    background: rgba(201, 169, 97, 0.04);
+  }
+
+  .translator-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .translator-toggle .roman {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+  }
+
+  .translator-toggle h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--ink);
+  }
+
+  .translator-toggle .hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .translator-toggle .chev {
+    width: 10px;
+    height: 10px;
+    border-right: 1px solid var(--gold);
+    border-bottom: 1px solid var(--gold);
+    transform: rotate(45deg);
+    transition: transform 0.4s ease;
+    margin-bottom: 3px;
+  }
+
+  .translator.open .translator-toggle .chev {
+    transform: rotate(-135deg);
+    margin-bottom: -3px;
+  }
+
+  .translator-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease;
+  }
+
+  .translator.open .translator-body {
+    max-height: 600px;
+  }
+
+  .translator-inner {
+    padding: 8px 24px 24px;
+    border-top: 1px solid var(--rule-soft);
+  }
+
+  .translator-controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding: 16px 0 18px;
+    border-bottom: 1px solid var(--rule-soft);
+    margin-bottom: 18px;
+  }
+
+  .ctrl {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .ctrl-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .ctrl input[type="date"],
+  .ctrl input[type="time"] {
+    background: var(--bg);
+    border: 1px solid var(--rule-soft);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 1px;
+    outline: none;
+    transition: border-color 0.3s ease;
+    color-scheme: dark;
+  }
+
+  .ctrl input:focus {
+    border-color: var(--gold);
+  }
+
+  .now-btn {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 9px 18px;
+    cursor: pointer;
+    border-radius: 1px;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+
+  .now-btn:hover {
+    background: var(--gold);
+    color: var(--bg);
+  }
+
+  .translator-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-left: auto;
+  }
+
+  .translator-hint .ist-tag {
+    color: var(--gold);
+  }
+
+  /* Results table */
+  .translator-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .result {
+    background: var(--bg-card);
+    border: 1px solid var(--rule-soft);
+    border-radius: 2px;
+    padding: 12px 14px;
+    position: relative;
+  }
+
+  .result-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .result-city {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .result-zone {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+  }
+
+  .result-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    color: var(--ink);
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+
+  .result-time .ap {
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-left: 5px;
+    letter-spacing: 0.14em;
+  }
+
+  .result-date {
+    font-family: 'Inter', sans-serif;
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .day-delta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 1px;
+  }
+
+  .day-delta.prev { color: #d49b6a; border: 1px solid rgba(212,155,106,0.4); }
+  .day-delta.next { color: #6a9bd4; border: 1px solid rgba(106,155,212,0.4); }
+  .day-delta.same { display: none; }
+
+  /* ── Footer ────────────────────────────────────────── */
+  footer {
+    margin-top: 36px;
+    padding-top: 18px;
+    border-top: 1px solid var(--rule-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  footer .ornament {
+    color: var(--gold);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 14px;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  /* ── Responsive ─────────────────────────────────────── */
+  @media (max-width: 768px) {
+    body { padding: 18px 16px 32px; }
+    header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .header-meta { text-align: left; }
+    .hero {
+      grid-template-columns: 1fr;
+      padding: 24px 22px;
+      gap: 24px;
+      justify-items: center;
+    }
+    .analog { width: 150px; height: 150px; }
+    .digital-block { width: 100%; align-items: flex-start; }
+    .digital-time { font-size: 42px; }
+    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card { padding: 14px 14px 12px; }
+    .card-city { font-size: 16px; }
+    .card-time { font-size: 26px; }
+    .translator-controls { gap: 12px; }
+    .translator-hint { margin-left: 0; width: 100%; }
+  }
+
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: fadeIn 0.7s ease forwards;
+  }
+  .fade-in:nth-child(1) { animation-delay: 0.05s; }
+  .fade-in:nth-child(2) { animation-delay: 0.12s; }
+  .fade-in:nth-child(3) { animation-delay: 0.19s; }
+  .fade-in:nth-child(4) { animation-delay: 0.26s; }
+  .fade-in:nth-child(5) { animation-delay: 0.33s; }
+
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="eyebrow">Horologium · Est. MMXXVI</div>
+      <h1>World <span class="ital">Time</span></h1>
+    </div>
+    <div class="header-meta">
+      <div><span class="live-dot"></span>Live · Synchronised</div>
+      <div id="localZone">— · —</div>
+    </div>
+  </header>
+
+  <!-- IST Hero -->
+  <section class="hero">
+    <div class="analog">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="100" cy="100" r="96" fill="none" stroke="rgba(201,169,97,0.35)" stroke-width="0.5"/>
+        <circle cx="100" cy="100" r="92" fill="#0c1015" stroke="rgba(201,169,97,0.5)" stroke-width="1"/>
+        <circle cx="100" cy="100" r="88" fill="none" stroke="rgba(201,169,97,0.15)" stroke-width="0.5"/>
+        <g id="ticks"></g>
+        <g font-family="Cormorant Garamond, serif" font-size="11" fill="#ecdfc8" text-anchor="middle" font-weight="500">
+          <text x="100" y="24">XII</text>
+          <text x="138" y="34">I</text>
+          <text x="165" y="61">II</text>
+          <text x="176" y="104">III</text>
+          <text x="165" y="146">IV</text>
+          <text x="138" y="173">V</text>
+          <text x="100" y="184">VI</text>
+          <text x="62" y="173">VII</text>
+          <text x="35" y="146">VIII</text>
+          <text x="24" y="104">IX</text>
+          <text x="35" y="61">X</text>
+          <text x="62" y="34">XI</text>
+        </g>
+        <text x="100" y="74" font-family="Cormorant Garamond, serif" font-style="italic" font-size="7" fill="#c9a961" text-anchor="middle" letter-spacing="2">India Standard</text>
+        <text x="100" y="135" font-family="JetBrains Mono, monospace" font-size="5" fill="#6b7280" text-anchor="middle" letter-spacing="2">UTC +05:30</text>
+        <g id="hourHand" transform="rotate(0 100 100)">
+          <line x1="100" y1="100" x2="100" y2="54" stroke="#ecdfc8" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <g id="minuteHand" transform="rotate(0 100 100)">
+          <line x1="100" y1="100" x2="100" y2="36" stroke="#ecdfc8" stroke-width="2" stroke-linecap="round"/>
+        </g>
+        <g id="secondHand" transform="rotate(0 100 100)">
+          <line x1="100" y1="108" x2="100" y2="28" stroke="#c9a961" stroke-width="1" stroke-linecap="round"/>
+          <circle cx="100" cy="32" r="2" fill="#c9a961"/>
+        </g>
+        <circle cx="100" cy="100" r="4" fill="#c9a961"/>
+        <circle cx="100" cy="100" r="1.5" fill="#0c1015"/>
+      </svg>
+    </div>
+
+    <div class="digital-block">
+      <div class="digital-label">Primary · Home Standard</div>
+      <div class="city-name">Mumbai · New Delhi <span class="ital">India</span></div>
+      <div class="digital-time">
+        <span id="istHM">--:--</span><span class="seconds" id="istS">--</span><span class="ampm" id="istAP">--</span>
+      </div>
+      <div class="digital-meta">
+        <div class="meta-item">
+          <div class="meta-label">Date</div>
+          <div class="meta-value" id="istDate">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Day</div>
+          <div class="meta-value" id="istDay">—</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Zone</div>
+          <div class="meta-value">IST · UTC+05:30</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Other zones -->
+  <div class="section-title">
+    <span class="roman">II.</span>
+    <h2>across the meridians</h2>
+  </div>
+
+  <div class="grid" id="zoneGrid">
+    <div class="card fade-in" data-zone="UTC">
+      <div class="card-head">
+        <div>
+          <div class="card-city">Universal</div>
+          <div class="card-region">Reference · UTC±00:00</div>
+        </div>
+        <div class="card-zone">UTC</div>
+      </div>
+      <div class="card-time"><span class="t-hm">--:--</span><span class="sec t-s">--</span><span class="ap t-ap"></span></div>
+      <div class="card-date">
+        <span class="t-date">—</span>
+        <span class="daylight"><span class="dot"></span><span class="t-dn">—</span></span>
+      </div>
+    </div>
+
+    <div class="card fade-in" data-zone="Europe/London">
+      <div class="card-head">
+        <div>
+          <div class="card-city">London</div>
+          <div class="card-region">United Kingdom</div>
+        </div>
+        <div class="card-zone" id="londonZ">GMT</div>
+      </div>
+      <div class="card-time"><span class="t-hm">--:--</span><span class="sec t-s">--</span><span class="ap t-ap"></span></div>
+      <div class="card-date">
+        <span class="t-date">—</span>
+        <span class="daylight"><span class="dot"></span><span class="t-dn">—</span></span>
+      </div>
+    </div>
+
+    <div class="card fade-in" data-zone="America/New_York">
+      <div class="card-head">
+        <div>
+          <div class="card-city">New York</div>
+          <div class="card-region">Eastern · USA</div>
+        </div>
+        <div class="card-zone" id="estZ">EST</div>
+      </div>
+      <div class="card-time"><span class="t-hm">--:--</span><span class="sec t-s">--</span><span class="ap t-ap"></span></div>
+      <div class="card-date">
+        <span class="t-date">—</span>
+        <span class="daylight"><span class="dot"></span><span class="t-dn">—</span></span>
+      </div>
+    </div>
+
+    <div class="card fade-in" data-zone="America/Los_Angeles">
+      <div class="card-head">
+        <div>
+          <div class="card-city">Los Angeles</div>
+          <div class="card-region">Pacific · USA</div>
+        </div>
+        <div class="card-zone" id="pstZ">PST</div>
+      </div>
+      <div class="card-time"><span class="t-hm">--:--</span><span class="sec t-s">--</span><span class="ap t-ap"></span></div>
+      <div class="card-date">
+        <span class="t-date">—</span>
+        <span class="daylight"><span class="dot"></span><span class="t-dn">—</span></span>
+      </div>
+      <div class="zoho-badge">
+        Zoho<div class="sub">refresh</div>
+      </div>
+    </div>
+
+    <div class="card fade-in" data-zone="Asia/Singapore">
+      <div class="card-head">
+        <div>
+          <div class="card-city">Singapore</div>
+          <div class="card-region">Republic of Singapore</div>
+        </div>
+        <div class="card-zone">SGT</div>
+      </div>
+      <div class="card-time"><span class="t-hm">--:--</span><span class="sec t-s">--</span><span class="ap t-ap"></span></div>
+      <div class="card-date">
+        <span class="t-date">—</span>
+        <span class="daylight"><span class="dot"></span><span class="t-dn">—</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- IST Translator -->
+  <section class="translator" id="translator">
+    <button class="translator-toggle" id="translatorToggle" aria-expanded="false">
+      <div class="translator-toggle-left">
+        <span class="roman">III.</span>
+        <h2>translate IST to all zones</h2>
+      </div>
+      <div class="hint">
+        <span>open converter</span>
+        <span class="chev"></span>
+      </div>
+    </button>
+    <div class="translator-body">
+      <div class="translator-inner">
+        <div class="translator-controls">
+          <div class="ctrl">
+            <label class="ctrl-label" for="conv-date">IST Date</label>
+            <input type="date" id="conv-date" />
+          </div>
+          <div class="ctrl">
+            <label class="ctrl-label" for="conv-time">IST Time</label>
+            <input type="time" id="conv-time" />
+          </div>
+          <button class="now-btn" id="nowBtn">Reset to now</button>
+          <div class="translator-hint">if it is <span class="ist-tag" id="hintIST">—</span> in IST, then →</div>
+        </div>
+
+        <div class="translator-results" id="results">
+          <!-- generated -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div>System Time · Browser Synced</div>
+    <div class="ornament">·  ·  ·</div>
+    <div id="footerDate">—</div>
+  </footer>
+</div>
+
+<script>
+  /* ─── Analog tick marks ─── */
+  (function buildTicks() {
+    const ticks = document.getElementById('ticks');
+    for (let i = 0; i < 60; i++) {
+      const angle = (i * 6) * Math.PI / 180;
+      const isHour = i % 5 === 0;
+      const r1 = isHour ? 80 : 84;
+      const r2 = 88;
+      const x1 = 100 + r1 * Math.sin(angle);
+      const y1 = 100 - r1 * Math.cos(angle);
+      const x2 = 100 + r2 * Math.sin(angle);
+      const y2 = 100 - r2 * Math.cos(angle);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+      line.setAttribute('stroke', isHour ? '#c9a961' : 'rgba(236,223,200,0.25)');
+      line.setAttribute('stroke-width', isHour ? '1.2' : '0.5');
+      ticks.appendChild(line);
+    }
+  })();
+
+  /* ─── Helpers ─── */
+  function getZoneParts(timeZone, date) {
+    const d = date || new Date();
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      year: 'numeric', month: 'short', day: '2-digit', weekday: 'long'
+    });
+    const parts = {};
+    fmt.formatToParts(d).forEach(p => { parts[p.type] = p.value; });
+    return parts;
+  }
+
+  function getTzAbbreviation(timeZone) {
+    try {
+      const s = new Intl.DateTimeFormat('en-US', {
+        timeZone, timeZoneName: 'short', hour: '2-digit'
+      }).formatToParts(new Date()).find(p => p.type === 'timeZoneName');
+      return s ? s.value : '';
+    } catch (e) { return ''; }
+  }
+
+  function to12(h) {
+    const hr = parseInt(h, 10);
+    const ap = hr >= 12 ? 'PM' : 'AM';
+    let h12 = hr % 12;
+    if (h12 === 0) h12 = 12;
+    return { h: String(h12).padStart(2, '0'), ap };
+  }
+
+  function dayOrNight(hour) {
+    const h = parseInt(hour, 10);
+    return (h >= 6 && h < 19) ? 'day' : 'night';
+  }
+
+  /* ─── Live updates ─── */
+  function updateIST() {
+    const p = getZoneParts('Asia/Kolkata');
+    const { h, ap } = to12(p.hour);
+    document.getElementById('istHM').textContent = `${h}:${p.minute}`;
+    document.getElementById('istS').textContent = p.second;
+    document.getElementById('istAP').textContent = ap;
+    document.getElementById('istDate').textContent = `${p.day} ${p.month} ${p.year}`;
+    document.getElementById('istDay').textContent = p.weekday;
+
+    const hourNum = parseInt(p.hour, 10);
+    const minNum = parseInt(p.minute, 10);
+    const secNum = parseInt(p.second, 10);
+    document.getElementById('hourHand').setAttribute('transform', `rotate(${(hourNum%12)*30 + minNum*0.5} 100 100)`);
+    document.getElementById('minuteHand').setAttribute('transform', `rotate(${minNum*6 + secNum*0.1} 100 100)`);
+    document.getElementById('secondHand').setAttribute('transform', `rotate(${secNum*6} 100 100)`);
+  }
+
+  function updateCards() {
+    document.querySelectorAll('.card').forEach(card => {
+      const zone = card.dataset.zone;
+      const p = getZoneParts(zone);
+      const { h, ap } = to12(p.hour);
+      card.querySelector('.t-hm').textContent = `${h}:${p.minute}`;
+      card.querySelector('.t-s').textContent = p.second;
+      card.querySelector('.t-ap').textContent = ap;
+      card.querySelector('.t-date').textContent = `${p.weekday.slice(0,3)} · ${p.day} ${p.month}`;
+      const dn = dayOrNight(p.hour);
+      const daylight = card.querySelector('.daylight');
+      daylight.classList.remove('day', 'night');
+      daylight.classList.add(dn);
+      card.querySelector('.t-dn').textContent = dn;
+    });
+
+    const estAbbr = getTzAbbreviation('America/New_York');
+    if (estAbbr) document.getElementById('estZ').textContent = estAbbr;
+    const pstAbbr = getTzAbbreviation('America/Los_Angeles');
+    if (pstAbbr) document.getElementById('pstZ').textContent = pstAbbr;
+    const londonAbbr = getTzAbbreviation('Europe/London');
+    if (londonAbbr) document.getElementById('londonZ').textContent = londonAbbr;
+  }
+
+  function updateHeaderLocal() {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const abbr = getTzAbbreviation(tz);
+      document.getElementById('localZone').textContent = `${tz.replace('_', ' ')} · ${abbr}`;
+    } catch (e) {
+      document.getElementById('localZone').textContent = 'Local Time';
+    }
+    const now = new Date();
+    document.getElementById('footerDate').textContent =
+      now.toLocaleDateString('en-US', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  function tick() { updateIST(); updateCards(); }
+  tick(); updateHeaderLocal();
+  setInterval(tick, 1000);
+  setInterval(updateHeaderLocal, 60000);
+
+  /* ─── Translator ─── */
+  const ZONES_TO_CONVERT = [
+    { city: 'Universal',  zone: 'UTC',                 label: 'UTC' },
+    { city: 'London',     zone: 'Europe/London',       label: '' },
+    { city: 'New York',   zone: 'America/New_York',    label: '' },
+    { city: 'Los Angeles',zone: 'America/Los_Angeles', label: '', zoho: true },
+    { city: 'Singapore',  zone: 'Asia/Singapore',      label: 'SGT' }
+  ];
+
+  function getCurrentISTParts() {
+    const p = getZoneParts('Asia/Kolkata');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mo = String(months.indexOf(p.month) + 1).padStart(2, '0');
+    return {
+      date: `${p.year}-${mo}-${p.day}`,
+      time: `${p.hour}:${p.minute}`
+    };
+  }
+
+  function setNowOnControls() {
+    const { date, time } = getCurrentISTParts();
+    document.getElementById('conv-date').value = date;
+    document.getElementById('conv-time').value = time;
+    runConversion();
+  }
+
+  function runConversion() {
+    const dateVal = document.getElementById('conv-date').value;
+    const timeVal = document.getElementById('conv-time').value;
+    if (!dateVal || !timeVal) return;
+
+    // Build an instant that represents the given IST date+time
+    const istMoment = new Date(`${dateVal}T${timeVal}:00+05:30`);
+    if (isNaN(istMoment.getTime())) return;
+
+    // Hint
+    const [hh, mm] = timeVal.split(':');
+    const { h, ap } = to12(hh);
+    document.getElementById('hintIST').textContent = `${h}:${mm} ${ap}`;
+
+    // IST reference date for day-delta comparison
+    const istDay = parseInt(dateVal.split('-')[2], 10);
+
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+
+    ZONES_TO_CONVERT.forEach(z => {
+      const parts = getZoneParts(z.zone, istMoment);
+      const { h: th, ap: tap } = to12(parts.hour);
+      const zoneAbbr = z.label || getTzAbbreviation(z.zone) || '';
+
+      // Day delta vs IST date
+      const targetDay = parseInt(parts.day, 10);
+      // Handle month-crossing edges: compare via the actual Date difference instead
+      const targetDateOnly = new Date(istMoment.toLocaleString('en-US', { timeZone: z.zone }));
+      const istDateOnly = new Date(istMoment.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+      // Floor to dates
+      const td = new Date(targetDateOnly.getFullYear(), targetDateOnly.getMonth(), targetDateOnly.getDate());
+      const id = new Date(istDateOnly.getFullYear(), istDateOnly.getMonth(), istDateOnly.getDate());
+      const deltaDays = Math.round((td - id) / 86400000);
+      let deltaClass = 'same', deltaText = '';
+      if (deltaDays < 0) { deltaClass = 'prev'; deltaText = deltaDays === -1 ? 'prev day' : `${Math.abs(deltaDays)}d prior`; }
+      else if (deltaDays > 0) { deltaClass = 'next'; deltaText = deltaDays === 1 ? 'next day' : `${deltaDays}d later`; }
+
+      const card = document.createElement('div');
+      card.className = 'result';
+      card.innerHTML = `
+        <div class="result-head">
+          <div class="result-city">${z.city}${z.zoho ? ' <span style="color:#b34c4c;font-family:JetBrains Mono,monospace;font-size:8px;letter-spacing:0.2em;margin-left:4px;">· ZOHO</span>' : ''}</div>
+          <div class="result-zone">${zoneAbbr}</div>
+        </div>
+        <div class="result-time">${th}:${parts.minute}<span class="ap">${tap}</span></div>
+        <div class="result-date">
+          <span>${parts.weekday.slice(0,3)} · ${parts.day} ${parts.month}</span>
+          <span class="day-delta ${deltaClass}">${deltaText}</span>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // Wire up translator
+  const translator = document.getElementById('translator');
+  const toggle = document.getElementById('translatorToggle');
+  toggle.addEventListener('click', () => {
+    const isOpen = translator.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    toggle.querySelector('.hint span:first-child').textContent = isOpen ? 'close converter' : 'open converter';
+    if (isOpen) setNowOnControls();
+  });
+
+  document.getElementById('conv-date').addEventListener('input', runConversion);
+  document.getElementById('conv-time').addEventListener('input', runConversion);
+  document.getElementById('nowBtn').addEventListener('click', setNowOnControls);
+</script>
+</body>
+</html>
